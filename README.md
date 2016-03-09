@@ -17,3 +17,6 @@ Usage:
 
 Organizations are created if they do not yet exists.
 Existing repositories (in Gogs) are not overwritten.
+
+To convert newly created Repository and Organization
+names to lowercase, append `--lc-names` to command line.

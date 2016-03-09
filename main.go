@@ -4,7 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
-
+	"strings"
 	"github.com/ewoutp/go-gitlab-client"
 	"github.com/gogits/go-gogs-client"
 )
@@ -18,6 +18,7 @@ var (
 	gogsUrl        string
 	gogsToken      string
 	gogsUser       string
+	lcNames        bool
 )
 
 func init() {
@@ -29,6 +30,7 @@ func init() {
 	flag.StringVar(&gogsUrl, "gogs-url", "", "")
 	flag.StringVar(&gogsToken, "gogs-token", "", "")
 	flag.StringVar(&gogsUser, "gogs-user", "", "")
+	flag.BoolVar(&lcNames, "lc-names", false, "")
 }
 
 func main() {
@@ -37,7 +39,8 @@ func main() {
 	gc := gogs.NewClient(gogsUrl, gogsToken)
 	orgMap := make(map[string]*gogs.Organization)
 
-	getOrg := func(name string) *gogs.Organization {
+	getOrg := func(o *gogitlab.Namespace) *gogs.Organization {
+		name := fixName(o.Name)
 		org, ok := orgMap[name]
 		if ok {
 			return org
@@ -49,7 +52,10 @@ func main() {
 		}
 		createOpt := gogs.CreateOrgOption{
 			UserName: name,
+			FullName: o.Name,
+			Description: o.Description,
 		}
+		fmt.Printf("Creating organization '%s' as '%s'...\n", o.Name, name)
 		org, err = gc.AdminCreateOrg(gogsUser, createOpt)
 		if err != nil {
 			exitf("Failed to create organization '%s': %v\n", name, err)
@@ -59,13 +65,14 @@ func main() {
 	}
 
 	migrate := func(p *gogitlab.Project) {
-		_, err := gc.GetRepo(p.Namespace.Name, p.Name)
+		name := fixName(p.Name)
+		ns := fixName(p.Namespace.Name)
+		_, err := gc.GetRepo(ns, name)
 		if err == nil {
-			fmt.Printf("%s | %s already exists\n", p.Namespace.Name, p.Name)
+			fmt.Printf("Repository '%s/%s' already exists.\n", ns, name)
 		} else {
-			org := getOrg(p.Namespace.Name)
-			name := fixName(p.Name)
-			fmt.Printf("%s | %s migrating as '%s'...\n", p.Namespace.Name, p.Name, name)
+			org := getOrg(p.Namespace)
+			fmt.Printf("Migrating '%s/%s' as '%s/%s'...\n", p.Namespace.Name, p.Name, ns, name)
 			opts := gogs.MigrateRepoOption{
 				CloneAddr:    p.HttpRepoUrl,
 				AuthUsername: gitlabUser,
@@ -77,7 +84,7 @@ func main() {
 			}
 			_, err := gc.MigrateRepo(opts)
 			if err != nil {
-				exitf("Failed to migrate '%s | %s': %v\n", p.Namespace.Name, p.Name, err)
+				exitf("Failed to migrate '%s/%s': %v\n", p.Namespace.Name, p.Name, err)
 			}
 		}
 	}
@@ -100,7 +107,11 @@ func fixName(name string) string {
 	case "api": // reserved
 		return "theapi"
 	default:
-		return name
+		if lcNames {
+			return strings.ToLower(name)
+		} else {
+			return name
+		}
 	}
 }
 

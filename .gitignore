@@ -1,3 +1,5 @@
 .gobuild
 gitlab2gogs
-
+*.bak
+*.exe
+*.tmp
