@@ -5,7 +5,7 @@ GOBUILDDIR := $(SCRIPTDIR)/.gobuild
 SRCDIR := $(SCRIPTDIR)
 BINDIR := $(SCRIPTDIR)
 
-ORGPATH := github.com/ewoutp
+ORGPATH := github.com/bishwasubedi
 ORGDIR := $(GOBUILDDIR)/src/$(ORGPATH)
 REPONAME := $(PROJECT)
 REPODIR := $(ORGDIR)/$(REPONAME)

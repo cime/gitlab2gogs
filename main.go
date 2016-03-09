@@ -19,6 +19,8 @@ var (
 	gogsToken      string
 	gogsUser       string
 	lcNames        bool
+	gitlabOrg      string
+	gitlabRepo     string
 )
 
 func init() {
@@ -31,6 +33,8 @@ func init() {
 	flag.StringVar(&gogsToken, "gogs-token", "", "")
 	flag.StringVar(&gogsUser, "gogs-user", "", "")
 	flag.BoolVar(&lcNames, "lc-names", false, "")
+	flag.StringVar(&gitlabOrg, "gitlab-org", "", "")
+	flag.StringVar(&gitlabRepo, "gitlab-repo", "", "")
 }
 
 func main() {
@@ -94,9 +98,24 @@ func main() {
 	if err != nil {
 		exitf("Cannot get gitlab projects: %v\n", err)
 	}
+	if gitlabOrg != "" {
+		gitlabOrg = strings.ToLower(gitlabOrg)
+	}
+	if gitlabRepo != "" {
+		gitlabRepo = strings.ToLower(gitlabRepo)
+	}
 	for _, p := range projects {
 		if p.Archived {
 			continue
+		}
+		if gitlabOrg != "" {
+			if gitlabOrg == strings.ToLower(p.Namespace.Name) {
+				if gitlabRepo != "" && gitlabRepo != strings.ToLower(p.Name) {
+					continue
+				}
+			} else {
+				continue
+			}
 		}
 		migrate(p)
 	}
