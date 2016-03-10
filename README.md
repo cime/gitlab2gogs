@@ -21,6 +21,8 @@ Existing repositories (in Gogs) are not overwritten.
 To convert newly created Repository and Organization
 names to lowercase, append `--lc-names` to command line.
 
-For migration of Repositories in a single Organization: `-gitlab-org <organization name>`
+For migration of Repositories in a single Organization: `-namespace <organization name>`
 
-And to migrate a single Repository within that Organization: `-gitlab-repo <repository name>`
+And to migrate a single Repository within that Organization: `-project <repository name>`
+
+To make migrated Repositories as mirror (backup) Repository: `--mirror`

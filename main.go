@@ -19,8 +19,9 @@ var (
 	gogsToken      string
 	gogsUser       string
 	lcNames        bool
-	gitlabOrg      string
-	gitlabRepo     string
+	glNamespace    string
+	glProject      string
+	isMirror       bool
 )
 
 func init() {
@@ -33,8 +34,9 @@ func init() {
 	flag.StringVar(&gogsToken, "gogs-token", "", "")
 	flag.StringVar(&gogsUser, "gogs-user", "", "")
 	flag.BoolVar(&lcNames, "lc-names", false, "")
-	flag.StringVar(&gitlabOrg, "gitlab-org", "", "")
-	flag.StringVar(&gitlabRepo, "gitlab-repo", "", "")
+	flag.StringVar(&glNamespace, "namespace", "", "")
+	flag.StringVar(&glProject, "project", "", "")
+	flag.BoolVar(&isMirror, "mirror", false, "")
 }
 
 func main() {
@@ -85,6 +87,7 @@ func main() {
 				RepoName:     name,
 				Private:      !p.Public,
 				Description:  p.Description,
+				Mirror:       isMirror,
 			}
 			_, err := gc.MigrateRepo(opts)
 			if err != nil {
@@ -98,27 +101,32 @@ func main() {
 	if err != nil {
 		exitf("Cannot get gitlab projects: %v\n", err)
 	}
-	if gitlabOrg != "" {
-		gitlabOrg = strings.ToLower(gitlabOrg)
+	if glNamespace != "" {
+		glNamespace = strings.ToLower(glNamespace)
 	}
-	if gitlabRepo != "" {
-		gitlabRepo = strings.ToLower(gitlabRepo)
+	if glProject != "" {
+		glProject = strings.ToLower(glProject)
 	}
+	fmt.Println("\nMigration Started...\n")
 	for _, p := range projects {
 		if p.Archived {
+			fmt.Printf("Archived Repository '%s/%s' skipped.\n", p.Namespace.Name, p.Name)
 			continue
 		}
-		if gitlabOrg != "" {
-			if gitlabOrg == strings.ToLower(p.Namespace.Name) {
-				if gitlabRepo != "" && gitlabRepo != strings.ToLower(p.Name) {
+		if glNamespace != "" {
+			if glNamespace == strings.ToLower(p.Namespace.Name) {
+				if glProject != "" && glProject != strings.ToLower(p.Name) {
+					fmt.Printf("Skipping Project: '%s/%s'.\n", p.Namespace.Name, p.Name)
 					continue
 				}
 			} else {
+				fmt.Printf("Skipping Namespace: '%s'.\n", p.Namespace.Name)
 				continue
 			}
 		}
 		migrate(p)
 	}
+	fmt.Println("\nMigration Completed.\n")
 }
 
 func fixName(name string) string {
