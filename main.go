@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"github.com/ewoutp/go-gitlab-client"
+
 	"github.com/gogits/go-gogs-client"
+	"github.com/xanzy/go-gitlab"
 )
 
 var (
@@ -45,7 +46,7 @@ func main() {
 	gc := gogs.NewClient(gogsUrl, gogsToken)
 	orgMap := make(map[string]*gogs.Organization)
 
-	getOrg := func(o *gogitlab.Namespace) *gogs.Organization {
+	getOrg := func(o *gitlab.ProjectNamespace) *gogs.Organization {
 		name := fixName(o.Name)
 		org, ok := orgMap[name]
 		if ok {
@@ -59,7 +60,6 @@ func main() {
 		createOpt := gogs.CreateOrgOption{
 			UserName: name,
 			FullName: o.Name,
-			Description: o.Description,
 		}
 		fmt.Printf("Creating organization '%s' as '%s'...\n", o.Name, name)
 		org, err = gc.AdminCreateOrg(gogsUser, createOpt)
@@ -70,7 +70,7 @@ func main() {
 		return org
 	}
 
-	migrate := func(p *gogitlab.Project) {
+	migrate := func(p *gitlab.Project) {
 		name := fixName(p.Name)
 		ns := fixName(p.Namespace.Name)
 		_, err := gc.GetRepo(ns, name)
@@ -80,7 +80,7 @@ func main() {
 			org := getOrg(p.Namespace)
 			fmt.Printf("Migrating '%s/%s' as '%s/%s'...\n", p.Namespace.Name, p.Name, ns, name)
 			opts := gogs.MigrateRepoOption{
-				CloneAddr:    p.HttpRepoUrl,
+				CloneAddr:    p.HTTPURLToRepo,
 				AuthUsername: gitlabUser,
 				AuthPassword: gitlabPassword,
 				UID:          int(org.ID),
@@ -96,8 +96,9 @@ func main() {
 		}
 	}
 
-	gitlab := gogitlab.NewGitlab(gitlabHost, gitlabApiPath, gitlabToken)
-	projects, err := gitlab.AllProjects()
+	gitlabClient := gitlab.NewClient(nil, gitlabToken)
+	gitlabClient.SetBaseURL(gitlabHost)
+	projects, _, err := gitlabClient.Projects.ListProjects(nil)
 	if err != nil {
 		exitf("Cannot get gitlab projects: %v\n", err)
 	}
